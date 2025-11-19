@@ -1,1 +1,1 @@
-# Chess-in-C-
+# chess-cpp
