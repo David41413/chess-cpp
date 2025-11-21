@@ -6,7 +6,6 @@
 #include <limits>
 #include <memory>
 #include <vector>
-// #include "Random.h" // For eventual AI opponent
 #include <string>
 
 class Notation {
@@ -34,6 +33,10 @@ enum class Side{
     White,
     Black
 };
+
+bool onBoard(const Notation& position) {
+    return position.getFile() >= 'a' && position.getFile() <= 'h' && position.getRank() >= 1 && position.getRank() <= 8;
+}
 
 class ChessPiece {
 public:
@@ -201,10 +204,10 @@ public:
     virtual bool threatens(const Notation& position) const override {
         if (!onBoard(position)) return false;
         
-        const std::array<std::pair<int, int>, 4> offsets {{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}};
+        const std::array<std::pair<int, int>, 4> offsets {{{1, 0}, {0, 1}, {-1, 0}, {0, -1}}};
         for(const auto& [fileOffsets, rankOffsets] : offsets) {
             Notation threatened{m_currentPos.getFile() + fileOffsets, m_currentPos.getRank() + rankOffsets};
-            while((threatened != position) && isOccupied[threatened.getRank() - 1][threatened.getFile() - 'a'] && onBoard(threatened)) {
+            while(threatened != position && !isOccupied[threatened.getRank() - 1][threatened.getFile() - 'a'] && onBoard(threatened)) {
                     threatened = {static_cast<char>(threatened.getFile() + fileOffsets), threatened.getRank() + rankOffsets};
                 }
             if(threatened == position)
@@ -230,6 +233,21 @@ public:
             return true;
         }
         
+        return false;
+    }
+
+    virtual bool threatens(const Notation& position) const override {
+        if (!onBoard(position)) return false;
+        const std::array<std::pair<int, int>, 8> offsets
+            {{{2, 1}, {1, 2}, {-1, 2}, {2, -1},
+            {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}}};
+
+        for(const auto& [fileOffset, rankOffset] : offsets) {
+            Notation threatened{m_currentPos.getFile() + fileOffset, m_currentPos.getRank() + rankOffset};
+            if(threatened == position)
+                return true;
+        }
+
         return false;
     }
 };
@@ -267,10 +285,15 @@ public:
     virtual bool threatens(const Notation& position) const override {
         if (!onBoard(position)) return false;
         
-        const std::array<std::pair<int, int>, 4> offsets {{{1, 1}, {-1, 1}, {1, -1}, {-1, -1}}};
-
-        // Not done
-
+        const std::array<std::pair<int, int>, 4> offsets {{{1, 1}, {-1, 1}, {-1, -1}, {1, -1}}};
+        for(const auto& [fileOffsets, rankOffsets] : offsets) {
+            Notation threatened{m_currentPos.getFile() + fileOffsets, m_currentPos.getRank() + rankOffsets};
+            while(threatened != position && !isOccupied[threatened.getRank() - 1][threatened.getFile() - 'a'] && onBoard(threatened)) {
+                    threatened = {static_cast<char>(threatened.getFile() + fileOffsets), threatened.getRank() + rankOffsets};
+                }
+            if(threatened == position)
+                return true;
+        }
         return false;
     }
 };
@@ -281,6 +304,10 @@ public:
 
     virtual bool isValidMove(const Notation& newPos) const override {
         return Rook{m_currentPos, m_color}.isValidMove(newPos) || Bishop{m_currentPos, m_color}.isValidMove(newPos);
+    }
+
+    virtual bool threatens(const Notation& newPos) const override {
+        return Rook{m_currentPos, m_color}.threatens(newPos) || Bishop{m_currentPos, m_color}.threatens(newPos);
     }
 };
 
@@ -302,6 +329,19 @@ public:
             if(isValidCapture(newPos))
                 takes(newPos);
             return true;
+        }
+
+        return false;
+    }
+
+    virtual bool threatens(const Notation& position) const override {
+        if (!onBoard(position)) return false;
+        const std::array<std::pair<int, int>, 8> offsets{{{1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}}};
+
+        for(const auto& [fileOffset, rankOffset] : offsets) {
+            Notation threatened{m_currentPos.getFile() + fileOffset, m_currentPos.getRank() + rankOffset};
+            if(threatened == position)
+                return true;
         }
 
         return false;
@@ -334,7 +374,7 @@ std::vector<std::unique_ptr<ChessPiece>> makeBlackPieces() {
     v.emplace_back(std::make_unique<Rook>(Notation('a', 8)), Side::Black);
     v.emplace_back(std::make_unique<Knight>(Notation('b', 8)), Side::Black);
     v.emplace_back(std::make_unique<Bishop>(Notation('c', 8)), Side::Black);
-    v.emplace_back(std::make_unique<Queen>(Notation('d', 8)), Side::Black);
+    v.emplace_back(std::make_unique<King>(Notation('d', 8)), Side::Black);
     v.emplace_back(std::make_unique<Queen>(Notation('e', 8)), Side::Black);
     v.emplace_back(std::make_unique<Bishop>(Notation('f', 8)), Side::Black);
     v.emplace_back(std::make_unique<Knight>(Notation('g', 8)), Side::Black);
@@ -352,20 +392,18 @@ std::vector<std::unique_ptr<ChessPiece>> makeBlackPieces() {
 std::vector<std::unique_ptr<ChessPiece>> ChessPiece::whitePieces{ makeWhitePieces() };
 std::vector<std::unique_ptr<ChessPiece>> ChessPiece::blackPieces{ makeBlackPieces() };
 
-bool onBoard(const Notation& position) {
-    return position.getFile() >= 'a' && position.getFile() <= 'h' && position.getRank() >= 1 && position.getRank() <= 8;
-}
-
-void makeMove(const std::string& from, const std::string& to, Side color, int turnNum) {
-    Notation fromPosition{from[0], from[1]};
-    Notation newPosition{to[0], to[1]};
-
+void makeMove(const Notation& fromPosition, const Notation& toPosition, Side color, int turnNum) {
     if(color == Side::White) {
+        King whiteKing{};
         auto currentPiecePtr{std::find_if(ChessPiece::whitePieces.begin(), ChessPiece::whitePieces.end(),
-            [&](const std::unique_ptr<ChessPiece>& piece){ return piece->getPosition() == fromPosition; })};
+            [&](const std::unique_ptr<ChessPiece>& piece){
+                if(piece == static_cast<King>(piece)) // Duplicate to black once done & create conversion constructor (also for pawn promotion)
+                    whiteKing = piece; // Make assignment constructor for king
+                return piece->getPosition() == fromPosition;
+            })};
         if(currentPiecePtr != ChessPiece::whitePieces.end()) {
             ChessPiece* movingPiece{currentPiecePtr->get()};
-            movingPiece->moveTo(newPosition);
+            movingPiece->moveTo(toPosition);
             ++turnNum;
         } else
             std::cout << "There is no piece at " << fromPosition << ". Please try again.";
@@ -375,7 +413,7 @@ void makeMove(const std::string& from, const std::string& to, Side color, int tu
             [&](const std::unique_ptr<ChessPiece>& piece){ return piece->getPosition() == fromPosition; })};
         if(currentPiecePtr != ChessPiece::blackPieces.end()) {
             ChessPiece* movingPiece{currentPiecePtr->get()};
-            movingPiece->moveTo(newPosition);
+            movingPiece->moveTo(toPosition);
             ++turnNum;
         } else
             std::cout << "There is no piece at " << fromPosition << ". Please try again.";
@@ -383,7 +421,6 @@ void makeMove(const std::string& from, const std::string& to, Side color, int tu
 }
 
 int main() {
-
     std::cout << "Welcome to Chess!\n\n"
               << "Enter moves in standard algebraic notation in this format:"
               << "e2 (initial position) [space] e4 (new position).\n"
@@ -408,10 +445,13 @@ int main() {
         std::cin >> to;
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-        if(std::isalpha(from[0]) && std::isdigit(from[1]) && std::isalpha(to[0]) && std::isdigit(to[1]) && turnNum % 2 == 0)
-            makeMove(from, to, Side::Black, turnNum);
-        else if(std::isalpha(from[0]) && std::isdigit(from[1]) && std::isalpha(to[0]) && std::isdigit(to[1]) && turnNum % 2 == 1)
-            makeMove(from, to, Side::White, turnNum);
+        Notation fromPosition{from[0], from[1]};
+        Notation toPosition{to[0], to[1]};
+
+        if(std::isalpha(from[0]) && std::isdigit(from[1]) && std::isalpha(to[0]) && std::isdigit(to[1]) && turnNum % 2 == 0) {
+            makeMove(fromPosition, toPosition, Side::Black, turnNum);
+        } else if(std::isalpha(from[0]) && std::isdigit(from[1]) && std::isalpha(to[0]) && std::isdigit(to[1]) && turnNum % 2 == 1)
+            makeMove(fromPosition, toPosition, Side::White, turnNum);
         else
             std::cout << "Invalid move format. Please use standard algebraic notation.\n";
         
