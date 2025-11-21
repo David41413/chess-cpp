@@ -410,7 +410,7 @@ int main() {
 
         if(std::isalpha(from[0]) && std::isdigit(from[1]) && std::isalpha(to[0]) && std::isdigit(to[1]) && turnNum % 2 == 0)
             makeMove(from, to, Side::Black, turnNum);
-        else if(std::isalpha(from[0]) && std::isdigit(from[1]) && std::isalpha(to[0]) && std::isdigit(to[1]) && !(turnNum % 2 == 0))
+        else if(std::isalpha(from[0]) && std::isdigit(from[1]) && std::isalpha(to[0]) && std::isdigit(to[1]) && turnNum % 2 == 1)
             makeMove(from, to, Side::White, turnNum);
         else
             std::cout << "Invalid move format. Please use standard algebraic notation.\n";
