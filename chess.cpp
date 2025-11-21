@@ -350,59 +350,55 @@ public:
 
 std::vector<std::unique_ptr<ChessPiece>> makeWhitePieces() {
     std::vector<std::unique_ptr<ChessPiece>> v;
-    v.emplace_back(std::make_unique<Rook>(Notation('a', 1)), Side::White);
-    v.emplace_back(std::make_unique<Knight>(Notation('b', 1)), Side::White);
-    v.emplace_back(std::make_unique<Bishop>(Notation('c', 1)), Side::White);
-    v.emplace_back(std::make_unique<Queen>(Notation('d', 1)), Side::White);
-    v.emplace_back(std::make_unique<King>(Notation('e', 1)), Side::White);
-    v.emplace_back(std::make_unique<Bishop>(Notation('f', 1)), Side::White);
-    v.emplace_back(std::make_unique<Knight>(Notation('g', 1)), Side::White);
-    v.emplace_back(std::make_unique<Rook>(Notation('h', 1)), Side::White);
-    v.emplace_back(std::make_unique<Pawn>(Notation('a', 2)), Side::White);
-    v.emplace_back(std::make_unique<Pawn>(Notation('b', 2)), Side::White);
-    v.emplace_back(std::make_unique<Pawn>(Notation('c', 2)), Side::White);
-    v.emplace_back(std::make_unique<Pawn>(Notation('d', 2)), Side::White);
-    v.emplace_back(std::make_unique<Pawn>(Notation('e', 2)), Side::White);
-    v.emplace_back(std::make_unique<Pawn>(Notation('f', 2)), Side::White);
-    v.emplace_back(std::make_unique<Pawn>(Notation('g', 2)), Side::White);
-    v.emplace_back(std::make_unique<Pawn>(Notation('h', 2)), Side::White);
+    v.emplace_back(std::make_unique<Rook>(Notation('a', 1), Side::White));
+    v.emplace_back(std::make_unique<Knight>(Notation('b', 1), Side::White));
+    v.emplace_back(std::make_unique<Bishop>(Notation('c', 1), Side::White));
+    v.emplace_back(std::make_unique<Queen>(Notation('d', 1), Side::White));
+    v.emplace_back(std::make_unique<King>(Notation('e', 1), Side::White));
+    v.emplace_back(std::make_unique<Bishop>(Notation('f', 1), Side::White));
+    v.emplace_back(std::make_unique<Knight>(Notation('g', 1), Side::White));
+    v.emplace_back(std::make_unique<Rook>(Notation('h', 1), Side::White));
+    v.emplace_back(std::make_unique<Pawn>(Notation('a', 2), Side::White));
+    v.emplace_back(std::make_unique<Pawn>(Notation('b', 2), Side::White));
+    v.emplace_back(std::make_unique<Pawn>(Notation('c', 2), Side::White));
+    v.emplace_back(std::make_unique<Pawn>(Notation('d', 2), Side::White));
+    v.emplace_back(std::make_unique<Pawn>(Notation('e', 2), Side::White));
+    v.emplace_back(std::make_unique<Pawn>(Notation('f', 2), Side::White));
+    v.emplace_back(std::make_unique<Pawn>(Notation('g', 2), Side::White));
+    v.emplace_back(std::make_unique<Pawn>(Notation('h', 2), Side::White));
     return v;
 }
 
 std::vector<std::unique_ptr<ChessPiece>> makeBlackPieces() {
     std::vector<std::unique_ptr<ChessPiece>> v;
-    v.emplace_back(std::make_unique<Rook>(Notation('a', 8)), Side::Black);
-    v.emplace_back(std::make_unique<Knight>(Notation('b', 8)), Side::Black);
-    v.emplace_back(std::make_unique<Bishop>(Notation('c', 8)), Side::Black);
-    v.emplace_back(std::make_unique<King>(Notation('d', 8)), Side::Black);
-    v.emplace_back(std::make_unique<Queen>(Notation('e', 8)), Side::Black);
-    v.emplace_back(std::make_unique<Bishop>(Notation('f', 8)), Side::Black);
-    v.emplace_back(std::make_unique<Knight>(Notation('g', 8)), Side::Black);
-    v.emplace_back(std::make_unique<Pawn>(Notation('a', 7)), Side::Black);
-    v.emplace_back(std::make_unique<Pawn>(Notation('b', 7)), Side::Black);
-    v.emplace_back(std::make_unique<Pawn>(Notation('c', 7)), Side::Black);
-    v.emplace_back(std::make_unique<Pawn>(Notation('d', 7)), Side::Black);
-    v.emplace_back(std::make_unique<Pawn>(Notation('e', 7)), Side::Black);
+    v.emplace_back(std::make_unique<Rook>(Notation('a', 8), Side::Black));
+    v.emplace_back(std::make_unique<Knight>(Notation('b', 8), Side::Black));
+    v.emplace_back(std::make_unique<Bishop>(Notation('c', 8), Side::Black));
+    v.emplace_back(std::make_unique<King>(Notation('d', 8), Side::Black));
+    v.emplace_back(std::make_unique<Queen>(Notation('e', 8), Side::Black));
+    v.emplace_back(std::make_unique<Bishop>(Notation('f', 8), Side::Black));
+    v.emplace_back(std::make_unique<Knight>(Notation('g', 8), Side::Black));
+    v.emplace_back(std::make_unique<Pawn>(Notation('a', 7), Side::Black));
+    v.emplace_back(std::make_unique<Pawn>(Notation('b', 7), Side::Black));
+    v.emplace_back(std::make_unique<Pawn>(Notation('c', 7), Side::Black));
+    v.emplace_back(std::make_unique<Pawn>(Notation('d', 7), Side::Black));
+    v.emplace_back(std::make_unique<Pawn>(Notation('e', 7), Side::Black));
     v.emplace_back(std::make_unique<Pawn>(Notation('f', 7), Side::Black));
-    v.emplace_back(std::make_unique<Pawn>(Notation('g', 7)), Side::Black);
-    v.emplace_back(std::make_unique<Pawn>(Notation('h', 7)), Side::Black);
+    v.emplace_back(std::make_unique<Pawn>(Notation('g', 7), Side::Black));
+    v.emplace_back(std::make_unique<Pawn>(Notation('h', 7), Side::Black));
     return v;
 }
 
 std::vector<std::unique_ptr<ChessPiece>> ChessPiece::whitePieces{ makeWhitePieces() };
-std::vector<std::unique_ptr<ChessPiece>> ChessPiece::blackPieces{ makeBlackPieces() };
+std::vector<std::unique_ptr<ChessPiece>> ChessPiece::blackPieces{ makeBlackPieces() }; 
 
 void makeMove(const Notation& fromPosition, const Notation& toPosition, Side color, int turnNum) {
     if(color == Side::White) {
-        King whiteKing{};
         auto currentPiecePtr{std::find_if(ChessPiece::whitePieces.begin(), ChessPiece::whitePieces.end(),
-            [&](const std::unique_ptr<ChessPiece>& piece){
-                if(piece == static_cast<King>(piece)) // Duplicate to black once done & create conversion constructor (also for pawn promotion)
-                    whiteKing = piece; // Make assignment constructor for king
-                return piece->getPosition() == fromPosition;
-            })};
+            [&](const std::unique_ptr<ChessPiece>& piece){ return piece->getPosition() == fromPosition; })};
         if(currentPiecePtr != ChessPiece::whitePieces.end()) {
             ChessPiece* movingPiece{currentPiecePtr->get()};
+            if(movingPiece->threatens()) {}
             movingPiece->moveTo(toPosition);
             ++turnNum;
         } else
@@ -431,6 +427,11 @@ int main() {
     std::string from, to;
     int turnNum{ 1 };
 
+    auto whiteKing{std::find_if(ChessPiece::whitePieces.begin(), ChessPiece::whitePieces.end(),
+        [&](const std::unique_ptr<ChessPiece>& piece){ return piece->getPosition() == Notation('e', 1); })};
+    auto blackKing{std::find_if(ChessPiece::blackPieces.begin(), ChessPiece::blackPieces.end(),
+        [&](const std::unique_ptr<ChessPiece>& piece){ return piece->getPosition() == Notation('d', 8); })};
+
     while(true) {
         if(turnNum % 2 == 0)
             std::cout << "Turn " << turnNum << "\nBlack's turn. Enter your move: ";
@@ -447,12 +448,13 @@ int main() {
 
         Notation fromPosition{from[0], from[1]};
         Notation toPosition{to[0], to[1]};
-
+        
         if(std::isalpha(from[0]) && std::isdigit(from[1]) && std::isalpha(to[0]) && std::isdigit(to[1]) && turnNum % 2 == 0) {
-            makeMove(fromPosition, toPosition, Side::Black, turnNum);
-        } else if(std::isalpha(from[0]) && std::isdigit(from[1]) && std::isalpha(to[0]) && std::isdigit(to[1]) && turnNum % 2 == 1)
+            if(/* moving piece doesn't threaten king*/)
+                makeMove(fromPosition, toPosition, Side::Black, turnNum);
+        } else if(std::isalpha(from[0]) && std::isdigit(from[1]) && std::isalpha(to[0]) && std::isdigit(to[1]) && turnNum % 2 == 1) {
             makeMove(fromPosition, toPosition, Side::White, turnNum);
-        else
+        } else
             std::cout << "Invalid move format. Please use standard algebraic notation.\n";
         
         from = "";
