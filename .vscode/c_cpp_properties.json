@@ -4,7 +4,9 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${vcpkgRoot}/x64-windows/include"
+                "C:/msys64/mingw64/include",
+                "C:/msys64/mingw64/include/c++/15.2.0",
+                "C:/msys64/mingw64/include/c++/15.2.0/x86_64-w64-mingw32"
             ],
             "defines": [
                 "_DEBUG",
@@ -14,8 +16,8 @@
             "windowsSdkVersion": "10.0.26100.0",
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "windows-msvc-x64",
-            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe"
+            "intelliSenseMode": "windows-gcc-x64",
+            "compilerPath": "C:/msys64/mingw64/bin/g++.exe"
         }
     ],
     "version": 4
