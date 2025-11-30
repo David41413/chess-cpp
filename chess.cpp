@@ -709,7 +709,6 @@ void makeMove(const Notation& fromPosition, const Notation& toPosition, Side col
                 return;
             }
             if(movingPiece->validMove(toPosition)) {
-                movingPiece->moveTo(toPosition);
                 if(dynamic_cast<Pawn*>(movingPiece.get()) != nullptr) {
                     Pawn* pawn{ dynamic_cast<Pawn*>(movingPiece.get()) };
                     auto pawnPtr{ pawn->getAdjacentPawnPtr() };
@@ -718,6 +717,7 @@ void makeMove(const Notation& fromPosition, const Notation& toPosition, Side col
                     }
                     return;
                 }
+                movingPiece->moveTo(toPosition);
                 if(movingPiece->validCapture(toPosition)) {
                     movingPiece->takes(toPosition);
                     Pawn::fiftyMoveCounter = 0;
