@@ -65,6 +65,7 @@ public:
     
     virtual bool threatens(const Notation& newPos) const {
         assert(false && "Derived class must override threat()");
+        std::exit(EXIT_FAILURE);
         return false;
     }
 
@@ -106,6 +107,7 @@ public:
 protected:
     virtual bool canReach(const Notation& newPos) const {
         assert(false && "Derived class must override validMove()");
+        std::exit(EXIT_FAILURE);
         return false;
     }
 
@@ -114,6 +116,7 @@ protected:
 };
 
 std::array<std::array<bool, 8>, 8> ChessPiece::isOccupied = { false };
+using PieceIter = std::vector<std::unique_ptr<ChessPiece>>::iterator;
 
 class Pawn : public ChessPiece {
 public:
@@ -146,12 +149,66 @@ public:
         ChessPiece::moveTo(newPos);
     }
 
+    PieceIter getAdjacentPawnPtr() const {
+        return std::find_if(
+            (m_color == Side::White) ?
+            ChessPiece::blackPieces.begin() : ChessPiece::whitePieces.begin(),
+            (m_color == Side::White) ?
+            ChessPiece::blackPieces.end() : ChessPiece::whitePieces.end(),
+            [this](const std::unique_ptr<ChessPiece>& piece) {
+                return dynamic_cast<Pawn*>(piece.get()) != nullptr &&
+                       std::abs(piece->getPosition().getFile() - this->getPosition().getFile()) == 1 &&
+                       piece->getPosition().getRank() == this->getPosition().getRank();
+            }
+        );
+    }
+
+    bool canEnPassant(PieceIter pawnPtr) const {
+        if(this->getPosition().getRank() != ((m_color == Side::White) ? 5 : 4)) {
+            std::cout << "En passant not possible. Please try again.\n";
+            return false;
+        }
+        if(pawnPtr != ((m_color == Side::White) ?
+           ChessPiece::blackPieces.end() : ChessPiece::whitePieces.end())) {
+            Pawn* pawn = dynamic_cast<Pawn*>(pawnPtr->get());
+            if(pawn->getFirstMove()) {
+                std::cout << "En passant not possible. Please try again.\n";
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void enPassant(PieceIter pawnPtr) {
+        if(this->getPosition().getRank() != ((m_color == Side::White) ? 5 : 4)) {
+            std::cout << "En passant not possible. Please try again.\n";
+            return;
+        }
+
+        if(pawnPtr != ((m_color == Side::White) ?
+           ChessPiece::blackPieces.end() : ChessPiece::whitePieces.end())) {
+            Pawn* pawn = dynamic_cast<Pawn*>(pawnPtr->get());
+            Notation capturedPos{(*pawnPtr)->getPosition()};
+            pawnPtr->reset();
+            isOccupied[capturedPos.getRank() - 1][capturedPos.getFile() - 'a'] = false;
+            
+            this->moveTo(Notation(this->getPosition().getFile(), (m_color == Side::White) ? 6 : 3));
+        }
+    }
+
+    bool getFirstMove() const { return m_firstMove; }
+
     static int fiftyMoveCounter;
 
 private:
+    const std::pair<int, int> m_validMoves {
+        (m_color == Side::White)
+            ? std::pair<int, int>{0, 1}
+            : std::pair<int, int>{0, -1}
+    };
     bool m_firstMove { true };
 
-    virtual bool canReach(const Notation& newPos) const {
+    virtual bool canReach(const Notation& newPos) const override {
         int fileInt = static_cast<int>(m_currentPos.getFile()) + m_validMoves.first;
         Notation moves{
             static_cast<char>(fileInt),
@@ -174,33 +231,14 @@ private:
         return false;
     }
 
-    void enPassant(Side color, const Notation& pawnPosition) const {
-        auto pawnPtr {std::find_if(
-            (color == Side::White) ?
-            ChessPiece::blackPieces.begin() : ChessPiece::whitePieces.begin(),
-            (color == Side::White) ?
-            ChessPiece::blackPieces.end() : ChessPiece::whitePieces.end(),
-            [pawnPosition](const std::unique_ptr<ChessPiece>& piece) {
-                return dynamic_cast<Pawn*>(piece.get()) != nullptr &&
-                       piece->getPosition() == pawnPosition;
-            }
-        )};
-    }
-
     const std::array<std::pair<int, int>, 2> m_captureMoves {
         (m_color == Side::White)
             ? std::array<std::pair<int, int>, 2>{{{-1, 1}, {1, 1}}}
             : std::array<std::pair<int, int>, 2>{{{-1, -1}, {1, -1}}}
     };
-
-    const std::pair<int, int> m_validMoves {
-        (m_color == Side::White)
-            ? std::pair<int, int>{0, 1}
-            : std::pair<int, int>{0, -1}
-    };
 };
 
-static int fiftyMoveCounter = {0};
+int Pawn::fiftyMoveCounter = {0};
 
 class Rook : public ChessPiece {
 public:
@@ -449,8 +487,6 @@ std::vector<std::unique_ptr<ChessPiece>> makeBlackPieces() {
 std::vector<std::unique_ptr<ChessPiece>> ChessPiece::whitePieces{ makeWhitePieces() };
 std::vector<std::unique_ptr<ChessPiece>> ChessPiece::blackPieces{ makeBlackPieces() }; 
 
-using PieceIter = std::vector<std::unique_ptr<ChessPiece>>::iterator;
-
 PieceIter getKingPtr(Side color) {
     return std::find_if(
         (color == Side::White) ?
@@ -674,6 +710,14 @@ void makeMove(const Notation& fromPosition, const Notation& toPosition, Side col
             }
             if(movingPiece->validMove(toPosition)) {
                 movingPiece->moveTo(toPosition);
+                if(dynamic_cast<Pawn*>(movingPiece.get()) != nullptr) {
+                    Pawn* pawn{ dynamic_cast<Pawn*>(movingPiece.get()) };
+                    auto pawnPtr{ pawn->getAdjacentPawnPtr() };
+                    if(pawn->canEnPassant(pawnPtr)) {
+                        pawn->enPassant(pawnPtr);
+                    }
+                    return;
+                }
                 if(movingPiece->validCapture(toPosition)) {
                     movingPiece->takes(toPosition);
                     Pawn::fiftyMoveCounter = 0;
