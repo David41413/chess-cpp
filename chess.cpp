@@ -28,8 +28,8 @@ public:
     }
 
 private:
-    char file; // For columns (a-h)
-    int rank; // For rows (1-8)
+    char file;
+    int rank;
 };
 
 enum class Side{
@@ -50,7 +50,7 @@ public:
         : m_currentPos{startPos}, m_color{color}
     {}
 
-    bool isValidMove(const Notation& newPos) const {
+    bool validMove(const Notation& newPos) const {
         if(!onBoard(newPos) || !canReach(newPos)) { return false; }
 
         for(auto& piece : ((m_color == Side::White) ?
@@ -105,7 +105,7 @@ public:
 
 protected:
     virtual bool canReach(const Notation& newPos) const {
-        assert(false && "Derived class must override isValidMove()");
+        assert(false && "Derived class must override validMove()");
         return false;
     }
 
@@ -139,9 +139,14 @@ public:
         if(m_firstMove) {
             m_firstMove = false;
         }
+        if(validCapture(newPos)) {
+            fiftyMoveCounter = 0;
+        }
 
         ChessPiece::moveTo(newPos);
     }
+
+    static int fiftyMoveCounter;
 
 private:
     bool m_firstMove { true };
@@ -194,6 +199,8 @@ private:
             : std::pair<int, int>{0, -1}
     };
 };
+
+static int fiftyMoveCounter = {0};
 
 class Rook : public ChessPiece {
 public:
@@ -352,8 +359,8 @@ public:
 
 private:
     virtual bool canReach(const Notation& newPos) const override {
-        return Rook{m_currentPos, m_color}.isValidMove(newPos) ||
-               Bishop{m_currentPos, m_color}.isValidMove(newPos);
+        return Rook{m_currentPos, m_color}.validMove(newPos) ||
+               Bishop{m_currentPos, m_color}.validMove(newPos);
     }
 };
 
@@ -484,7 +491,7 @@ bool canEscapeCheckmate(const std::unique_ptr<ChessPiece>& piece, Side color) {
     for(char file = 'a'; file <= 'h'; ++file) {
         for(int rank = 1; rank <= 8; ++rank) {
             Notation newPos{file, rank};
-            if(piece->isValidMove(newPos)) {
+            if(piece->validMove(newPos)) {
                 Notation originalPos{piece->getPosition()};
                 piece->moveTo(newPos);
                 bool safe = kingSafe(color);
@@ -515,7 +522,7 @@ bool moveExists(const std::unique_ptr<ChessPiece>& piece, Side color) {
     for(char file = 'a'; file <= 'h'; ++file) {
         for(int rank = 1; rank <= 8; ++rank) {
             Notation newPos{file, rank};
-            if(piece->isValidMove(newPos)) {
+            if(piece->validMove(newPos)) {
                 return true;
             }
         }
@@ -633,7 +640,31 @@ void castling(std::string_view castleType, Side color) {
     }
 }
 
+void didGameEnd(Side color) {
+    if(!kingSafe(color) && checkmate(color)) {
+        std::cout << "Checkmate! "
+                  << ((color == Side::White) ? "White" : "Black")
+                  << " wins the game!\n";
+        std::exit(EXIT_SUCCESS);
+    }
+    else if(!kingSafe(color)) {
+        std::cout << "Check!\n";
+    }
+    else if(stalemate(color)) {
+        std::cout << "Stalemate! The game is a draw.\n";
+        std::exit(EXIT_SUCCESS);
+    }
+    if(Pawn::fiftyMoveCounter <= 50) {
+        std::cout << "Fifty-move rule reached! The game is a draw.\n";
+        std::exit(EXIT_SUCCESS);
+    }
+}
+
 void makeMove(const Notation& fromPosition, const Notation& toPosition, Side color, int turnNum) {
+    if(color == Side::White) {
+        ++Pawn::fiftyMoveCounter;
+    }
+
     for(const auto& movingPiece : ((color == Side::White) ?
         ChessPiece::whitePieces : ChessPiece::blackPieces)) {
         if(movingPiece->getPosition() == fromPosition) {
@@ -641,27 +672,12 @@ void makeMove(const Notation& fromPosition, const Notation& toPosition, Side col
                 std::cout << "Move would put or leave your king in check. Please try again.\n";
                 return;
             }
-            if(movingPiece->isValidMove(toPosition)) {
+            if(movingPiece->validMove(toPosition)) {
                 movingPiece->moveTo(toPosition);
-
                 if(movingPiece->validCapture(toPosition)) {
                     movingPiece->takes(toPosition);
+                    Pawn::fiftyMoveCounter = 0;
                 }
-
-                if(!kingSafe(color) && checkmate(color)) {
-                    std::cout << "Checkmate! "
-                              << ((color == Side::White) ? "White" : "Black")
-                              << " wins the game!\n";
-                    std::exit(EXIT_SUCCESS);
-                }
-                else if(!kingSafe(color)) {
-                    std::cout << "Check!\n";
-                }
-                else if(stalemate(color)) {
-                    std::cout << "Stalemate! The game is a draw.\n";
-                    std::exit(EXIT_SUCCESS);
-                }
-                return;
             }
             else {
                 std::cout << "Invalid move for the selected piece. Please try again.\n";
@@ -669,10 +685,12 @@ void makeMove(const Notation& fromPosition, const Notation& toPosition, Side col
             }
         }
     }
-
+    
     if(color == Side::White) {
         ++turnNum;
     }
+    
+    didGameEnd(color);
 }
 
 int main() {
