@@ -49,7 +49,7 @@ public:
     ChessPiece(const Notation& startPos, Side color)
         : m_currentPos{startPos}, m_color{color}
     {}
-    ChessPiece() = delete;
+    virtual ~ChessPiece() = default;
 
     bool validMove(const Notation& newPos) const {
         if(!onBoard(newPos) || !canReach(newPos)) { return false; }
@@ -64,11 +64,7 @@ public:
         return true;
     }
     
-    virtual bool threatens(const Notation& newPos) const {
-        assert(false && "Derived class must override threat()");
-        std::exit(EXIT_FAILURE);
-        return false;
-    }
+    virtual bool threatens(const Notation& newPos) const = 0;
 
     bool validCapture(const Notation& newPos) const {
         for(const auto& piece : ((m_color == Side::White) ?
@@ -106,11 +102,7 @@ public:
     static std::array<std::array<bool, 8>, 8> isOccupied;
 
 protected:
-    virtual bool canReach(const Notation& newPos) const {
-        assert(false && "Derived class must override validMove()");
-        std::exit(EXIT_FAILURE);
-        return false;
-    }
+    virtual bool canReach(const Notation& newPos) const = 0;
 
     Notation m_currentPos;
     Side m_color;
