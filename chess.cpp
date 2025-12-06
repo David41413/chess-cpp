@@ -163,7 +163,17 @@ public:
         );
     }
 
-    bool canEnPassant(PieceIter pawnPtr) const {
+    bool canEnPassant(PieceIter pawnPtr) {
+        if(!onBoard(this->getPosition()) || !onBoard(pawnPtr->get()->getPosition())) {
+            return false;
+        }
+        if(m_enPassantChoice) {
+            std::cout << "En passant not possible. Please try again.\n";
+            return false;
+        }
+        else {
+            m_enPassantChoice = false;
+        }
         if(this->getPosition().getRank() != ((m_color == Side::White) ? 5 : 4)) {
             std::cout << "En passant not possible. Please try again.\n";
             return false;
@@ -176,15 +186,11 @@ public:
                 return false;
             }
         }
+
         return true;
     }
 
     void enPassant(PieceIter pawnPtr) {
-        if(this->getPosition().getRank() != ((m_color == Side::White) ? 5 : 4)) {
-            std::cout << "En passant not possible. Please try again.\n";
-            return;
-        }
-
         if(pawnPtr != ((m_color == Side::White) ?
            ChessPiece::blackPieces.end() : ChessPiece::whitePieces.end())) {
             Pawn* pawn{ dynamic_cast<Pawn*>(pawnPtr->get()) };
@@ -206,7 +212,9 @@ private:
             ? std::pair<int, int>{0, 1}
             : std::pair<int, int>{0, -1}
     };
+
     bool m_firstMove { true };
+    bool m_enPassantChoice { true };
 
     virtual bool canReach(const Notation& newPos) const override {
         int fileInt{ static_cast<int>(m_currentPos.getFile()) + m_validMoves.first };
@@ -768,21 +776,21 @@ int main() {
         std::cin >> notation2;
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-        bool validNotation { notation1[0] >= 'a' && notation1[0] <= 'h' &&
-                             notation1[1] - '0' >= 1 && notation1[1] - '0' <= 8 &&
-                             notation2[0] >= 'a' && notation2[0] <= 'h' &&
-                             notation2[1] - '0' >= 1 && notation2[1] - '0' <= 8 };
+        bool validNotation {
+            notation1[0] >= 'a' && notation1[0] <= 'h' &&
+            notation1[1] - '0' >= 1 && notation1[1] - '0' <= 8 &&
+            notation2[0] >= 'a' && notation2[0] <= 'h' &&
+            notation2[1] - '0' >= 1 && notation2[1] - '0' <= 8
+        };
 
         if(validNotation && turnNum % 2 == 0) {
             Notation fromPosition{notation1[0], notation1[1]};
             Notation toPosition{notation2[0], notation2[1] - '0'};
             makeMove(fromPosition, toPosition, Side::Black, turnNum);
-
         } else if(validNotation && turnNum % 2 == 1) {
             Notation fromPosition{notation1[0], notation1[1]};
             Notation toPosition{notation2[0], notation2[1] - '0'};
             makeMove(fromPosition, toPosition, Side::White, turnNum);
-
         } else {
             std::cout << "Invalid move format. Please use standard algebraic notation.\n";
         }
