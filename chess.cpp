@@ -49,6 +49,7 @@ public:
     ChessPiece(const Notation& startPos, Side color)
         : m_currentPos{startPos}, m_color{color}
     {}
+    ChessPiece() = delete;
 
     bool validMove(const Notation& newPos) const {
         if(!onBoard(newPos) || !canReach(newPos)) { return false; }
