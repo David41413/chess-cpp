@@ -28,8 +28,8 @@ public:
     }
 
 private:
-    char file; // For columns (a-h)
-    int rank; // For rows (1-8)
+    char file;
+    int rank;
 };
 
 enum class Side{
@@ -49,8 +49,9 @@ public:
     ChessPiece(const Notation& startPos, Side color)
         : m_currentPos{startPos}, m_color{color}
     {}
+    virtual ~ChessPiece() = default;
 
-    bool isValidMove(const Notation& newPos) const {
+    bool validMove(const Notation& newPos) const {
         if(!onBoard(newPos) || !canReach(newPos)) { return false; }
 
         for(auto& piece : ((m_color == Side::White) ?
@@ -63,10 +64,7 @@ public:
         return true;
     }
     
-    virtual bool threatens(const Notation& newPos) const {
-        assert(false && "Derived class must override threat()");
-        return false;
-    }
+    virtual bool threatens(const Notation& newPos) const = 0;
 
     bool validCapture(const Notation& newPos) const {
         for(const auto& piece : ((m_color == Side::White) ?
@@ -82,7 +80,7 @@ public:
         for(auto& piece : ((m_color == Side::White) ?
             ChessPiece::whitePieces : ChessPiece::blackPieces)) {
             if(piece->getPosition() == newPos && piece->getColor() != m_color) {
-                Notation capturedPos{piece->getPosition()};
+                Notation capturedPos{ piece->getPosition() };
                 piece.reset();
                 isOccupied[capturedPos.getRank() - 1][capturedPos.getFile() - 'a'] = false;
             }
@@ -104,16 +102,14 @@ public:
     static std::array<std::array<bool, 8>, 8> isOccupied;
 
 protected:
-    virtual bool canReach(const Notation& newPos) const {
-        assert(false && "Derived class must override isValidMove()");
-        return false;
-    }
+    virtual bool canReach(const Notation& newPos) const = 0;
 
     Notation m_currentPos;
     Side m_color;
 };
 
 std::array<std::array<bool, 8>, 8> ChessPiece::isOccupied = { false };
+using PieceIter = std::vector<std::unique_ptr<ChessPiece>>::iterator;
 
 class Pawn : public ChessPiece {
 public:
@@ -125,7 +121,7 @@ public:
         if(!onBoard(position)) { return false; }
 
         for(const auto& [fileOffset, rankOffset] : m_captureMoves) {
-            int fileInt = static_cast<int>(m_currentPos.getFile()) + fileOffset;
+            int fileInt{ static_cast<int>(m_currentPos.getFile()) + fileOffset };
             Notation threatened{ static_cast<char>(fileInt),
                                  m_currentPos.getRank() + rankOffset };
             if(threatened == position) {
@@ -139,15 +135,82 @@ public:
         if(m_firstMove) {
             m_firstMove = false;
         }
+        if(validCapture(newPos)) {
+            fiftyMoveCounter = 0;
+        }
 
         ChessPiece::moveTo(newPos);
     }
 
-private:
-    bool m_firstMove { true };
+    PieceIter getAdjacentPawnPtr() const {
+        return std::find_if(
+            (m_color == Side::White) ?
+            ChessPiece::blackPieces.begin() : ChessPiece::whitePieces.begin(),
+            (m_color == Side::White) ?
+            ChessPiece::blackPieces.end() : ChessPiece::whitePieces.end(),
+            [this](const std::unique_ptr<ChessPiece>& piece) {
+                return dynamic_cast<Pawn*>(piece.get()) != nullptr &&
+                       std::abs(piece->getPosition().getFile() - this->getPosition().getFile()) == 1 &&
+                       piece->getPosition().getRank() == this->getPosition().getRank();
+            }
+        );
+    }
 
-    virtual bool canReach(const Notation& newPos) const {
-        int fileInt = static_cast<int>(m_currentPos.getFile()) + m_validMoves.first;
+    bool canEnPassant(PieceIter pawnPtr) {
+        if(!onBoard(this->getPosition()) || !onBoard(pawnPtr->get()->getPosition())) {
+            return false;
+        }
+        if(m_enPassantChoice) {
+            std::cout << "En passant not possible. Please try again.\n";
+            return false;
+        }
+        else {
+            m_enPassantChoice = false;
+        }
+        if(this->getPosition().getRank() != ((m_color == Side::White) ? 5 : 4)) {
+            std::cout << "En passant not possible. Please try again.\n";
+            return false;
+        }
+        if(pawnPtr != ((m_color == Side::White) ?
+           ChessPiece::blackPieces.end() : ChessPiece::whitePieces.end())) {
+            Pawn* pawn{ dynamic_cast<Pawn*>(pawnPtr->get()) };
+            if(pawn->getFirstMove()) {
+                std::cout << "En passant not possible. Please try again.\n";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    void enPassant(PieceIter pawnPtr) {
+        if(pawnPtr != ((m_color == Side::White) ?
+           ChessPiece::blackPieces.end() : ChessPiece::whitePieces.end())) {
+            Pawn* pawn{ dynamic_cast<Pawn*>(pawnPtr->get()) };
+            Notation capturedPos{ (*pawnPtr)->getPosition() };
+            pawnPtr->reset();
+            isOccupied[capturedPos.getRank() - 1][capturedPos.getFile() - 'a'] = false;
+            
+            this->moveTo(Notation(this->getPosition().getFile(), (m_color == Side::White) ? 6 : 3));
+        }
+    }
+
+    bool getFirstMove() const { return m_firstMove; }
+
+    static int fiftyMoveCounter;
+
+private:
+    const std::pair<int, int> m_validMoves {
+        (m_color == Side::White)
+            ? std::pair<int, int>{0, 1}
+            : std::pair<int, int>{0, -1}
+    };
+
+    bool m_firstMove { true };
+    bool m_enPassantChoice { true };
+
+    virtual bool canReach(const Notation& newPos) const override {
+        int fileInt{ static_cast<int>(m_currentPos.getFile()) + m_validMoves.first };
         Notation moves{
             static_cast<char>(fileInt),
             m_currentPos.getRank() + m_validMoves.second
@@ -157,7 +220,7 @@ private:
             return true;
         }
         if(m_firstMove) {
-            int fileInt = static_cast<int>(m_currentPos.getFile()) + m_validMoves.first * 2;
+            int fileInt{ static_cast<int>(m_currentPos.getFile()) + m_validMoves.first * 2 };
             Notation doubleMove{
                 static_cast<char>(fileInt),
                 m_currentPos.getRank() + m_validMoves.second * 2
@@ -169,31 +232,14 @@ private:
         return false;
     }
 
-    void enPassant(Side color, const Notation& pawnPosition) const {
-        auto pawnPtr {std::find_if(
-            (color == Side::White) ?
-            ChessPiece::blackPieces.begin() : ChessPiece::whitePieces.begin(),
-            (color == Side::White) ?
-            ChessPiece::blackPieces.end() : ChessPiece::whitePieces.end(),
-            [pawnPosition](const std::unique_ptr<ChessPiece>& piece) {
-                return dynamic_cast<Pawn*>(piece.get()) != nullptr &&
-                       piece->getPosition() == pawnPosition;
-            }
-        )};
-    }
-
     const std::array<std::pair<int, int>, 2> m_captureMoves {
         (m_color == Side::White)
             ? std::array<std::pair<int, int>, 2>{{{-1, 1}, {1, 1}}}
             : std::array<std::pair<int, int>, 2>{{{-1, -1}, {1, -1}}}
     };
-
-    const std::pair<int, int> m_validMoves {
-        (m_color == Side::White)
-            ? std::pair<int, int>{0, 1}
-            : std::pair<int, int>{0, -1}
-    };
 };
+
+int Pawn::fiftyMoveCounter = {0};
 
 class Rook : public ChessPiece {
 public:
@@ -206,13 +252,13 @@ public:
         
         for(const auto& [fileOffsets, rankOffsets] : m_validMoves) {
             int fileInt = static_cast<int>(m_currentPos.getFile()) + fileOffsets;
-            Notation threatened{static_cast<char>(fileInt),
-                                m_currentPos.getRank() + rankOffsets};
+            Notation threatened{ static_cast<char>(fileInt),
+                                 m_currentPos.getRank() + rankOffsets };
 
             while(threatened != position &&
                   !isOccupied[threatened.getRank() - 1][threatened.getFile() - 'a'] &&
                   onBoard(threatened)) {
-                int fileInt = static_cast<int>(threatened.getFile()) + fileOffsets;
+                int fileInt{ static_cast<int>(threatened.getFile()) + fileOffsets };
                 threatened = {static_cast<char>(fileInt), threatened.getRank() + rankOffsets};
             }
             if(threatened == position) {
@@ -230,13 +276,13 @@ private:
     virtual bool canReach(const Notation& newPos) const override {
         for(const auto& [fileOffsets, rankOffsets] : m_validMoves) {
             int fileInt = static_cast<int>(m_currentPos.getFile()) + fileOffsets;
-            Notation moves{static_cast<char>(fileInt),
-                           m_currentPos.getRank() + rankOffsets};
+            Notation moves{ static_cast<char>(fileInt),
+                            m_currentPos.getRank() + rankOffsets };
 
             while(moves != newPos &&
                   !isOccupied[moves.getRank() - 1][moves.getFile() - 'a'] &&
                   onBoard(moves)) {
-                int fileInt = static_cast<int>(moves.getFile()) + fileOffsets;
+                int fileInt{ static_cast<int>(moves.getFile()) + fileOffsets };
                 moves = { static_cast<char>(fileInt), moves.getRank() + rankOffsets};
             }
             if(moves == newPos) {
@@ -257,9 +303,9 @@ public:
         if(!onBoard(position)) { return false; }
 
         for(const auto& [fileOffset, rankOffset] : m_validMoves) {
-            int fileInt = static_cast<int>(m_currentPos.getFile()) + fileOffset;
-            Notation threatened{static_cast<char>(fileInt),
-                                m_currentPos.getRank() + rankOffset};
+            int fileInt{ static_cast<int>(m_currentPos.getFile()) + fileOffset };
+            Notation threatened{ static_cast<char>(fileInt),
+                                 m_currentPos.getRank() + rankOffset };
 
             if(threatened == position) {
                 return true;
@@ -276,9 +322,9 @@ private:
 
     virtual bool canReach(const Notation& newPos) const override {
         for(const auto& [fileOffset, rankOffset] : m_validMoves) {
-            int fileInt = static_cast<int>(m_currentPos.getFile()) + fileOffset;
-            Notation moves{static_cast<char>(fileInt),
-                           m_currentPos.getRank() + rankOffset};
+            int fileInt{ static_cast<int>(m_currentPos.getFile()) + fileOffset };
+            Notation moves{ static_cast<char>(fileInt),
+                            m_currentPos.getRank() + rankOffset };
 
             if(moves == newPos) {
                 return true;
@@ -298,15 +344,15 @@ public:
         if(!onBoard(position)) { return false; }
         
         for(const auto& [fileOffsets, rankOffsets] : m_validMoves) {
-            int fileInt = static_cast<int>(m_currentPos.getFile()) + fileOffsets;
-            Notation threatened{static_cast<char>(fileInt),
-                                m_currentPos.getRank() + rankOffsets};
+            int fileInt{ static_cast<int>(m_currentPos.getFile()) + fileOffsets };
+            Notation threatened{ static_cast<char>(fileInt),
+                                 m_currentPos.getRank() + rankOffsets };
 
             while(threatened != position &&
                   !isOccupied[threatened.getRank() - 1][threatened.getFile() - 'a'] &&
                   onBoard(threatened)) {
-                int fileInt = static_cast<int>(threatened.getFile()) + fileOffsets;
-                threatened = {static_cast<char>(fileInt), threatened.getRank() + rankOffsets};
+                int fileInt{ static_cast<int>(threatened.getFile()) + fileOffsets };
+                threatened = { static_cast<char>(fileInt), threatened.getRank() + rankOffsets };
             }
             if(threatened == position) {
                 return true;
@@ -322,14 +368,14 @@ private:
 
     virtual bool canReach(const Notation& newPos) const override {
         for(const auto& [fileOffsets, rankOffsets] : m_validMoves) {
-            int fileInt = static_cast<int>(m_currentPos.getFile()) + fileOffsets;
-            Notation moves{static_cast<char>(fileInt), m_currentPos.getRank() + rankOffsets};
+            int fileInt{ static_cast<int>(m_currentPos.getFile()) + fileOffsets };
+            Notation moves{ static_cast<char>(fileInt), m_currentPos.getRank() + rankOffsets };
 
             while(moves != newPos &&
                   !isOccupied[moves.getRank() - 1][moves.getFile() - 'a'] &&
                   onBoard(moves)) {
-                    int fileInt = static_cast<int>(moves.getFile()) + fileOffsets;
-                    moves = {static_cast<char>(fileInt), moves.getRank() + rankOffsets};
+                    int fileInt{ static_cast<int>(moves.getFile()) + fileOffsets};
+                    moves = { static_cast<char>(fileInt), moves.getRank() + rankOffsets };
             }
             if(moves == newPos) {
                 return true;
@@ -352,8 +398,8 @@ public:
 
 private:
     virtual bool canReach(const Notation& newPos) const override {
-        return Rook{m_currentPos, m_color}.isValidMove(newPos) ||
-               Bishop{m_currentPos, m_color}.isValidMove(newPos);
+        return Rook{m_currentPos, m_color}.validMove(newPos) ||
+               Bishop{m_currentPos, m_color}.validMove(newPos);
     }
 };
 
@@ -367,9 +413,9 @@ public:
         if(!onBoard(position)) { return false; }
 
         for(const auto& [fileOffset, rankOffset] : m_validMoves) {
-            int fileInt = static_cast<int>(m_currentPos.getFile()) + fileOffset;
-            Notation threatened{static_cast<char>(fileInt),
-                                m_currentPos.getRank() + rankOffset};
+            int fileInt{ static_cast<int>(m_currentPos.getFile()) + fileOffset};
+            Notation threatened{ static_cast<char>(fileInt),
+                                 m_currentPos.getRank() + rankOffset };
 
             if(threatened == position) {
                 return true;
@@ -386,9 +432,9 @@ private:
 
     virtual bool canReach(const Notation& newPos) const override {
         for(const auto& [fileOffset, rankOffset] : m_validMoves) {
-            int fileInt = static_cast<int>(m_currentPos.getFile()) + fileOffset;
-            Notation moves{static_cast<char>(fileInt),
-                           m_currentPos.getRank() + rankOffset};
+            int fileInt{ static_cast<int>(m_currentPos.getFile()) + fileOffset};
+            Notation moves{ static_cast<char>(fileInt),
+                            m_currentPos.getRank() + rankOffset };
 
             if(moves == newPos) {
                 return true;
@@ -442,8 +488,6 @@ std::vector<std::unique_ptr<ChessPiece>> makeBlackPieces() {
 std::vector<std::unique_ptr<ChessPiece>> ChessPiece::whitePieces{ makeWhitePieces() };
 std::vector<std::unique_ptr<ChessPiece>> ChessPiece::blackPieces{ makeBlackPieces() }; 
 
-using PieceIter = std::vector<std::unique_ptr<ChessPiece>>::iterator;
-
 PieceIter getKingPtr(Side color) {
     return std::find_if(
         (color == Side::White) ?
@@ -457,7 +501,7 @@ PieceIter getKingPtr(Side color) {
 }
 
 bool kingSafe(Side color) {
-    Notation kingPosition{'e', (color == Side::White) ? 1 : 8};
+    Notation kingPosition{ 'e', (color == Side::White) ? 1 : 8 };
 
     auto kingPtr{ getKingPtr(color) };
 
@@ -483,11 +527,11 @@ bool kingSafe(Side color) {
 bool canEscapeCheckmate(const std::unique_ptr<ChessPiece>& piece, Side color) {
     for(char file = 'a'; file <= 'h'; ++file) {
         for(int rank = 1; rank <= 8; ++rank) {
-            Notation newPos{file, rank};
-            if(piece->isValidMove(newPos)) {
-                Notation originalPos{piece->getPosition()};
+            Notation newPos{ file, rank };
+            if(piece->validMove(newPos)) {
+                Notation originalPos{ piece->getPosition() };
                 piece->moveTo(newPos);
-                bool safe = kingSafe(color);
+                bool safe{ kingSafe(color) };
                 piece->moveTo(originalPos);
                 if(safe) {
                     return true;
@@ -514,8 +558,8 @@ bool checkmate(Side color) {
 bool moveExists(const std::unique_ptr<ChessPiece>& piece, Side color) {
     for(char file = 'a'; file <= 'h'; ++file) {
         for(int rank = 1; rank <= 8; ++rank) {
-            Notation newPos{file, rank};
-            if(piece->isValidMove(newPos)) {
+            Notation newPos{ file, rank };
+            if(piece->validMove(newPos)) {
                 return true;
             }
         }
@@ -550,7 +594,7 @@ PieceIter getRookPtr(Side color, const Notation& rookPosition) {
 }
 
 void shortCastle(PieceIter kingPtr, PieceIter rookPtr, Side color) {
-    Notation originalPos{(*kingPtr)->getPosition()};
+    Notation originalPos{ (*kingPtr)->getPosition() };
 
     for(int i = 0; i <= 1; ++i) {
         (*kingPtr)->moveTo(
@@ -571,7 +615,7 @@ void shortCastle(PieceIter kingPtr, PieceIter rookPtr, Side color) {
 }
 
 void longCastle(PieceIter kingPtr, PieceIter rookPtr, Side color) {
-    Notation originalPos{(*kingPtr)->getPosition()};
+    Notation originalPos{ (*kingPtr)->getPosition() };
 
     for(int i = 0; i <= 2; ++i) {
         (*kingPtr)->moveTo(
@@ -633,7 +677,31 @@ void castling(std::string_view castleType, Side color) {
     }
 }
 
+void didGameEnd(Side color) {
+    if(!kingSafe(color) && checkmate(color)) {
+        std::cout << "Checkmate! "
+                  << ((color == Side::White) ? "White" : "Black")
+                  << " wins the game!\n";
+        std::exit(EXIT_SUCCESS);
+    }
+    else if(!kingSafe(color)) {
+        std::cout << "Check!\n";
+    }
+    else if(stalemate(color)) {
+        std::cout << "Stalemate! The game is a draw.\n";
+        std::exit(EXIT_SUCCESS);
+    }
+    if(Pawn::fiftyMoveCounter <= 50) {
+        std::cout << "Fifty-move rule reached! The game is a draw.\n";
+        std::exit(EXIT_SUCCESS);
+    }
+}
+
 void makeMove(const Notation& fromPosition, const Notation& toPosition, Side color, int turnNum) {
+    if(color == Side::White) {
+        ++Pawn::fiftyMoveCounter;
+    }
+
     for(const auto& movingPiece : ((color == Side::White) ?
         ChessPiece::whitePieces : ChessPiece::blackPieces)) {
         if(movingPiece->getPosition() == fromPosition) {
@@ -641,27 +709,20 @@ void makeMove(const Notation& fromPosition, const Notation& toPosition, Side col
                 std::cout << "Move would put or leave your king in check. Please try again.\n";
                 return;
             }
-            if(movingPiece->isValidMove(toPosition)) {
+            if(movingPiece->validMove(toPosition)) {
+                if(dynamic_cast<Pawn*>(movingPiece.get()) != nullptr) {
+                    Pawn* pawn{ dynamic_cast<Pawn*>(movingPiece.get()) };
+                    auto pawnPtr{ pawn->getAdjacentPawnPtr() };
+                    if(pawn->canEnPassant(pawnPtr)) {
+                        pawn->enPassant(pawnPtr);
+                    }
+                    return;
+                }
                 movingPiece->moveTo(toPosition);
-
                 if(movingPiece->validCapture(toPosition)) {
                     movingPiece->takes(toPosition);
+                    Pawn::fiftyMoveCounter = 0;
                 }
-
-                if(!kingSafe(color) && checkmate(color)) {
-                    std::cout << "Checkmate! "
-                              << ((color == Side::White) ? "White" : "Black")
-                              << " wins the game!\n";
-                    std::exit(EXIT_SUCCESS);
-                }
-                else if(!kingSafe(color)) {
-                    std::cout << "Check!\n";
-                }
-                else if(stalemate(color)) {
-                    std::cout << "Stalemate! The game is a draw.\n";
-                    std::exit(EXIT_SUCCESS);
-                }
-                return;
             }
             else {
                 std::cout << "Invalid move for the selected piece. Please try again.\n";
@@ -669,10 +730,12 @@ void makeMove(const Notation& fromPosition, const Notation& toPosition, Side col
             }
         }
     }
-
+    
     if(color == Side::White) {
         ++turnNum;
     }
+    
+    didGameEnd(color);
 }
 
 int main() {
@@ -682,7 +745,7 @@ int main() {
               << "To castle short, type O-O, to castle long, type O-O-O.\n"
               << "Type \"resign\" to resign from the game.\n\n";
     std::string notation1, notation2;
-    int turnNum{ 1 };
+    int turnNum{1};
 
     while(true) {
         if(turnNum % 2 == 0) {
@@ -706,21 +769,21 @@ int main() {
         std::cin >> notation2;
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-        bool validNotation { notation1[0] >= 'a' && notation1[0] <= 'h' &&
-                             notation1[1] - '0' >= 1 && notation1[1] - '0' <= 8 &&
-                             notation2[0] >= 'a' && notation2[0] <= 'h' &&
-                             notation2[1] - '0' >= 1 && notation2[1] - '0' <= 8 };
+        bool validNotation {
+            notation1[0] >= 'a' && notation1[0] <= 'h' &&
+            notation1[1] - '0' >= 1 && notation1[1] - '0' <= 8 &&
+            notation2[0] >= 'a' && notation2[0] <= 'h' &&
+            notation2[1] - '0' >= 1 && notation2[1] - '0' <= 8
+        };
 
         if(validNotation && turnNum % 2 == 0) {
             Notation fromPosition{notation1[0], notation1[1]};
             Notation toPosition{notation2[0], notation2[1] - '0'};
             makeMove(fromPosition, toPosition, Side::Black, turnNum);
-
         } else if(validNotation && turnNum % 2 == 1) {
             Notation fromPosition{notation1[0], notation1[1]};
             Notation toPosition{notation2[0], notation2[1] - '0'};
             makeMove(fromPosition, toPosition, Side::White, turnNum);
-
         } else {
             std::cout << "Invalid move format. Please use standard algebraic notation.\n";
         }
