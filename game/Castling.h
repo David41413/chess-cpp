@@ -14,7 +14,7 @@ class Castling {
 public:
     Castling::Castling(Board& board) : m_board(board) {}
 
-    ConstPieceIter getRookPtr(const Notation& rookNotation, const Board& board, Side color);
+    ConstPieceIter getRookPtr(const Notation& rookPosition, const Board& board, Side color);
     void shortCastle(ConstPieceIter kingPtr, ConstPieceIter rookPtr, Side color);
     void longCastle(ConstPieceIter kingPtr, ConstPieceIter rookPtr, Side color);
     void castling(std::string_view castleType, Side color);

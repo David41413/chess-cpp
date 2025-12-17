@@ -32,12 +32,12 @@ ConstPieceIter Board::getKingPtr(Side color) {
 }
 
 bool Board::kingSafe(Side color) {
-    Notation kingNotation{ 'e', (color == Side::White) ? 1 : 8 };
+    Notation kingPosition{ 'e', (color == Side::White) ? 1 : 8 };
 
     auto kingPtr{ getKingPtr(color) };
 
     if(kingPtr != getPieces(color).end()) {
-        kingNotation = (*kingPtr)->getNotation();
+        kingPosition = (*kingPtr)->getPosition();
     }
     else {
         std::cerr << "Error: King not found on the board.\n";
@@ -45,7 +45,7 @@ bool Board::kingSafe(Side color) {
     }
         
     for(const auto& piece : getPieces(color)) {
-        if(piece->threatens(kingNotation)) {
+        if(piece->threatens(kingPosition)) {
             return false;
         }
     }

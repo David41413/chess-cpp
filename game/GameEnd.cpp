@@ -18,7 +18,7 @@ bool GameEnd::canEscapeCheckmate(const std::unique_ptr<ChessPiece>& piece, Side 
         for(int rank = 1; rank <= 8; ++rank) {
             Notation newPos{ file, rank };
             if(mh.validMove(newPos, *piece, m_board)) {
-                Notation originalPos{ piece->getNotation() };
+                Notation originalPos{ piece->getPosition() };
                 mh.moveTo(newPos, *piece);
                 bool safe{ m_board.kingSafe(color) };
                 mh.moveTo(originalPos, *piece);

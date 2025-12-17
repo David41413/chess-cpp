@@ -14,30 +14,30 @@
 
 using ConstPieceIter = std::vector<std::unique_ptr<ChessPiece>>::const_iterator;
 
-ConstPieceIter Castling::getRookPtr(const Notation& rookNotation, const Board& m_board, Side color) {
+ConstPieceIter Castling::getRookPtr(const Notation& rookPosition, const Board& m_board, Side color) {
     return std::find_if(
         m_board.getPieces(color).begin(),
         m_board.getPieces(color).end(),
-        [rookNotation](const std::unique_ptr<ChessPiece>& piece) {
+        [rookPosition](const std::unique_ptr<ChessPiece>& piece) {
             return dynamic_cast<Rook*>(piece.get()) != nullptr &&
-                    piece->getNotation() == rookNotation;
+                    piece->getPosition() == rookPosition;
         }
     );
 }
 
 void Castling::shortCastle(ConstPieceIter kingPtr, ConstPieceIter rookPtr, Side color) {
-    Notation originalPos{ (*kingPtr)->getNotation() };
+    Notation originalPos{ (*kingPtr)->getPosition() };
 
     for(int i = 0; i <= 1; ++i) {
         mh.moveTo(
             (color == Side::White) ?
-            Notation(static_cast<char>((*kingPtr)->getNotation().getFile() + 1), 1) :
-            Notation(static_cast<char>((*kingPtr)->getNotation().getFile() + 1), 8),
+            Notation(static_cast<char>((*kingPtr)->getPosition().getFile() + 1), 1) :
+            Notation(static_cast<char>((*kingPtr)->getPosition().getFile() + 1), 8),
             **kingPtr
         );
         if(!m_board.kingSafe(color) ||
-        ChessPiece::isOccupied[(*kingPtr)->getNotation().getRank() - 1]
-                                [(*kingPtr)->getNotation().getFile() - 'a']) {
+        ChessPiece::isOccupied[(*kingPtr)->getPosition().getRank() - 1]
+                                [(*kingPtr)->getPosition().getFile() - 'a']) {
             std::cout << "Cannot castle through or into check. Please try again.\n";
             mh.moveTo(originalPos, **kingPtr);
             return;
@@ -49,18 +49,18 @@ void Castling::shortCastle(ConstPieceIter kingPtr, ConstPieceIter rookPtr, Side 
 }
 
 void Castling::longCastle(ConstPieceIter kingPtr, ConstPieceIter rookPtr, Side color) {
-    Notation originalPos{ (*kingPtr)->getNotation() };
+    Notation originalPos{ (*kingPtr)->getPosition() };
 
     for(int i = 0; i <= 2; ++i) {
         mh.moveTo(
             (color == Side::White) ?
-            Notation(static_cast<char>((*kingPtr)->getNotation().getFile() - 1), 1) :
-            Notation(static_cast<char>((*kingPtr)->getNotation().getFile() - 1), 8),
+            Notation(static_cast<char>((*kingPtr)->getPosition().getFile() - 1), 1) :
+            Notation(static_cast<char>((*kingPtr)->getPosition().getFile() - 1), 8),
             **kingPtr
         );
         if(!m_board.kingSafe(color) ||
-            ChessPiece::isOccupied[(*kingPtr)->getNotation().getRank() - 1]
-                                [(*kingPtr)->getNotation().getFile() - 'a']) {
+            ChessPiece::isOccupied[(*kingPtr)->getPosition().getRank() - 1]
+                                [(*kingPtr)->getPosition().getFile() - 'a']) {
             std::cout << "Cannot castle through or into check. Please try again.\n";
             mh.moveTo(originalPos, **kingPtr);
             return;
@@ -93,7 +93,7 @@ void Castling::castling(std::string_view castleType, Side color) {
     }
 
     if(kingPtr != m_board.getPieces(color).end() &&
-    (*kingPtr)->getNotation() != Notation('e', (color == Side::White) ? 1 : 8)) {
+    (*kingPtr)->getPosition() != Notation('e', (color == Side::White) ? 1 : 8)) {
         std::cout << "King has been moved or was taken. Cannot castle.\n";
         return;
     }

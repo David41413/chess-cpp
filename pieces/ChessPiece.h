@@ -12,7 +12,7 @@ public:
     virtual bool threatens(const Notation& newPos) const = 0;
     virtual bool canReach(const Notation& newPos) const = 0;
 
-    Notation getNotation() const;
+    Notation getPosition() const;
     Side getColor() const;
 
     inline static std::array<std::array<bool, 8>, 8> isOccupied = { false };

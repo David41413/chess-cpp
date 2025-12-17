@@ -51,14 +51,14 @@ PieceIter Pawn::getAdjacentPawnPtr(Board& board) const {
         board.getPieces(m_color).end(),
         [this](const std::unique_ptr<ChessPiece>& piece) {
             return dynamic_cast<Pawn*>(piece.get()) != nullptr &&
-                   std::abs(piece->getNotation().getFile() - this->getNotation().getFile()) == 1 &&
-                   piece->getNotation().getRank() == this->getNotation().getRank();
+                   std::abs(piece->getPosition().getFile() - this->getPosition().getFile()) == 1 &&
+                   piece->getPosition().getRank() == this->getPosition().getRank();
         }
     );
 }
 
 bool Pawn::canEnPassant(PieceIter pawnPtr, const Board& board) {
-    if(!this->getNotation().onBoard() || !pawnPtr->get()->getNotation().onBoard()) {
+    if(!this->getPosition().onBoard() || !pawnPtr->get()->getPosition().onBoard()) {
         return false;
     }
     if(m_enPassantChoice) {
@@ -68,7 +68,7 @@ bool Pawn::canEnPassant(PieceIter pawnPtr, const Board& board) {
     else {
         m_enPassantChoice = false;
     }
-    if(this->getNotation().getRank() != ((m_color == Side::White) ? 5 : 4)) {
+    if(this->getPosition().getRank() != ((m_color == Side::White) ? 5 : 4)) {
         std::cout << "En passant not possible. Please try again.\n";
         return false;
     }
@@ -86,11 +86,11 @@ bool Pawn::canEnPassant(PieceIter pawnPtr, const Board& board) {
 void Pawn::enPassant(PieceIter pawnPtr, MoveHandler& mv, const Board& board) {
     if(pawnPtr != board.getPieces(m_color).end()) {
         Pawn* pawn{ dynamic_cast<Pawn*>(pawnPtr->get()) };
-        Notation capturedPos{ (*pawnPtr)->getNotation() };
+        Notation capturedPos{ (*pawnPtr)->getPosition() };
         pawnPtr->reset();
         isOccupied[capturedPos.getRank() - 1][capturedPos.getFile() - 'a'] = false;
             
-        this->moveTo(Notation(this->getNotation().getFile(), 
+        this->moveTo(Notation(this->getPosition().getFile(), 
                              (m_color == Side::White) ? 6 : 3),
                      mv,
                      board

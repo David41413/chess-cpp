@@ -12,7 +12,7 @@ public:
     void takes(const Notation& newPos, ChessPiece& chessPiece, Board& pieces);
     bool validMove(const Notation& newPos, const ChessPiece& chessPiece, const Board& pieces);
     bool validCapture(const Notation& newPos, const ChessPiece& chessPiece, const Board& pieces);
-    void makeMove(const Notation& fromNotation, const Notation& toNotation, Side color, int turnNum);
+    void makeMove(const Notation& fromPosition, const Notation& toPosition, Side color, int turnNum);
 
 private:
     Board& m_board;
